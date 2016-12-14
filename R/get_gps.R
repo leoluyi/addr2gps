@@ -17,18 +17,20 @@ library(data.table)
 #' addrs <- c("台北市中正區羅斯福路一段２號",
 #'            "台北市中正區貴陽街一段１２０號")
 #' get_gps(addrs)
-get_gps <- function(addrs, n_cpu = -1L, rate=200) {
+get_gps <- function(addrs, n_cpu = -1L, rate = 200) {
   # addrs <- c("台北市中正區羅斯福路一段２號",
   #            "台北市中正區貴陽街一段１２０號")
   if (!is.vector(addrs)) {
     stop("values must be character vecter")
   }
 
+  addrs <- unique(addrs)
+
   if (n_cpu == -1L) {
     n_cpu <- parallel::detectCores() - 1
   }
 
-  if (n_cpu > 1) {
+  if (n_cpu > 1 && length(addrs) >= 10) {
     cl <- parallel::makeCluster(n_cpu)
     print(cl)
     on.exit(parallel::stopCluster(cl))
@@ -58,6 +60,12 @@ get_gps <- function(addrs, n_cpu = -1L, rate=200) {
       rbindlist(idcol = "addr")
   }
 
+  # Fetch 2nd time
+  temp <- out[is.na(lat), addr] %>%
+    sapply(., FUN = get_gps_, rate,
+           simplify = FALSE, USE.NAMES = TRUE) %>%
+  rbindlist(idcol = "addr")
+  out <- rbindlist(list(out[!is.na(lat),], temp))
   out
 }
 
@@ -103,6 +111,7 @@ get_gps_ <- function(addr, rate=200) {
     jsonlite::fromJSON() %>%
     .[[1]] %>%
     as.data.table
-  res[, addr_norm := paste0(baddr2, bname2, village, road)]
+  res[!is.na(lat),
+      addr_norm := paste0(baddr2, bname2, village, road)]
   res
 }
