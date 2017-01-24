@@ -24,7 +24,10 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
     stop("values must be character vecter")
   }
 
+  n_oginial_addr <- length(addrs)
   addrs <- unique(addrs)
+  message(sprintf("Input %d address; processing %s unique",
+                  n_oginial_addr, length(addrs)))
 
   if (n_cpu == -1L) {
     n_cpu <- parallel::detectCores() - 1
