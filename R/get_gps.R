@@ -1,4 +1,4 @@
-library(snowfall)
+library(parallel)
 library(httr)
 library(rvest)
 library(data.table)
@@ -17,7 +17,7 @@ library(data.table)
 #' addrs <- c("台北市中正區羅斯福路一段２號",
 #'            "台北市中正區貴陽街一段１２０號")
 #' get_gps(addrs)
-get_gps <- function(addrs, n_cpu = -1L, rate = 200) {
+get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
   # addrs <- c("台北市中正區羅斯福路一段２號",
   #            "台北市中正區貴陽街一段１２０號")
   if (!is.vector(addrs)) {
@@ -50,44 +50,69 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200) {
     #   snowfall::sfLibrary(data.table, verbose = FALSE)
     # })
 
-    out <- parallel::parSapplyLB(addrs, FUN = get_gps_, rate,
+    out <- parallel::parSapplyLB(addrs, get_gps_,
+                                 rate = rate, use_tor = use_tor,
                                  simplify = FALSE, USE.NAMES = TRUE,
                                  cl = cl) %>%
-      rbindlist(idcol = "addr")
+      rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   } else {
-    out <- sapply(addrs, FUN = get_gps_, rate,
+    out <- sapply(addrs, FUN = get_gps_, rate, use_tor = FALSE,
                   simplify = FALSE, USE.NAMES = TRUE) %>%
-      rbindlist(idcol = "addr")
+      rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   }
 
   # Fetch 2nd time
   temp <- out[is.na(lat), addr] %>%
-    sapply(., FUN = get_gps_, rate,
+    sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
            simplify = FALSE, USE.NAMES = TRUE) %>%
-  rbindlist(idcol = "addr")
-  out <- rbindlist(list(out[!is.na(lat),], temp))
+    rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+  out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
+
+  # Fetch 3rd time (w/o tor)
+  temp <- out[is.na(lat), addr] %>%
+    sapply(., FUN = get_gps_, rate = rate, use_tor = FALSE,
+           simplify = FALSE, USE.NAMES = TRUE) %>%
+    rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+  out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
+
   out
 }
 
 
 #' @describeIn get_gps Get GPS from address vector length of one
-get_gps_ <- function(addr, rate=200) {
+get_gps_ <- function(addr, rate=200, use_tor = FALSE, ...) {
   # addr <- "台北市中正區羅斯福路一段２號"
 
   ## to be nice :)
   Sys.sleep(rexp(1, rate)) # sleep expo dist at rate per sec
 
   url <- "http://api.map.com.tw/net/GraphicsXY.aspx"
-  res <- GET(url,
-             use_proxy("socks5://localhost:9050"), # tor proxy
-             add_headers(
-               Referer = "http://www.map.com.tw/",
-               `User-Agent` = "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36"
-             ),
-             query = list(
-               search_class = "address",
-               SearchWord = addr,
-               searchkey = "D43A19151569F32A449B7EDCB8555165B68B5F95"))
+  get_ <- function(use_tor) {
+    if (use_tor) {
+      GET(url,
+          use_proxy("socks5://localhost:9050"), # tor proxy
+          add_headers(
+            Referer = "http://www.map.com.tw/",
+            `User-Agent` = "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36"
+          ),
+          query = list(
+            search_class = "address",
+            SearchWord = addr,
+            searchkey = "D43A19151569F32A449B7EDCB8555165B68B5F95"))
+    } else {
+      GET(url,
+          add_headers(
+            Referer = "http://www.map.com.tw/",
+            `User-Agent` = "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36"
+          ),
+          query = list(
+            search_class = "address",
+            SearchWord = addr,
+            searchkey = "D43A19151569F32A449B7EDCB8555165B68B5F95"))
+    }
+  }
+
+  res <- get_(use_tor)
   if (http_error(res)) {
     return(
       data.table(
