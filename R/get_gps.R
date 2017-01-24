@@ -2,6 +2,7 @@ library(parallel)
 library(httr)
 library(rvest)
 library(data.table)
+library(pbapply)
 
 #' Get GPS (lon, lat) from address
 #'
@@ -46,17 +47,13 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
     }
     clusterCall(cl, worker.init, c('httr', 'rvest', 'data.table'))
 
-    # suppressMessages({
-    #   snowfall::sfLibrary(httr, verbose = FALSE)
-    #   snowfall::sfLibrary(rvest, verbose = FALSE)
-    #   snowfall::sfLibrary(snowfall, verbose = FALSE)
-    #   snowfall::sfLibrary(data.table, verbose = FALSE)
-    # })
-
-    out <- parallel::parSapplyLB(addrs, get_gps_,
-                                 rate = rate, use_tor = use_tor,
-                                 simplify = FALSE, USE.NAMES = TRUE,
-                                 cl = cl) %>%
+    if (use_tor) {
+      message("(Using tor in crawling)")
+    }
+    out <- pbapply::pblapply(addrs, get_gps_,
+                             rate = rate, use_tor = use_tor,
+                             simplify = FALSE, USE.NAMES = TRUE,
+                             cl = cl) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   } else {
     out <- sapply(addrs, FUN = get_gps_, rate, use_tor = FALSE,
@@ -72,8 +69,14 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
   out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
 
   # Fetch 3rd time (w/o tor)
-  temp <- out[is.na(lat), addr] %>%
-    sapply(., FUN = get_gps_, rate = rate, use_tor = FALSE,
+  left <- out[is.na(lat), addr]
+  if (length(left) > 1000) {
+    use_tor <- TRUE
+    message(sprintf("Using tor for left %d data", length(left)))
+  }
+
+  temp <- left %>%
+    sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
            simplify = FALSE, USE.NAMES = TRUE) %>%
     rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)

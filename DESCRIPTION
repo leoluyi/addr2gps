@@ -15,4 +15,5 @@ Imports:
     data.table,
     httr,
     parallel,
+    pbapply,
     rvest
