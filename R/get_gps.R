@@ -67,7 +67,7 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
     use_tor <- TRUE
     message("(Using tor in crawling)")
   }
-  if (n_cpu > 1 && length(addrs) >= 10) {
+  if (n_cpu > 1 && length(left) >= 10) {
     temp <- left %>%
       pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
                         simplify = FALSE, USE.NAMES = TRUE,
