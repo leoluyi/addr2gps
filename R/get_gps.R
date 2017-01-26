@@ -43,13 +43,13 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
       for (p in packages) {
         library(p, character.only=TRUE)
       }
-      NULL
+      invisible(NULL)
     }
-    parallel::clusterCall(cl, worker.init, c('httr', 'rvest', 'data.table'))
+    invisible(
+      parallel::clusterCall(cl, worker.init, c('httr', 'rvest', 'data.table'))
+    )
 
-    if (use_tor) {
-      message("(Using tor in crawling)")
-    }
+    if (use_tor) message("(Using tor in crawling)");
     out <- pbapply::pbsapply(addrs, get_gps_, rate = rate, use_tor = use_tor,
                              simplify = FALSE, USE.NAMES = TRUE,
                              cl = cl) %>%
