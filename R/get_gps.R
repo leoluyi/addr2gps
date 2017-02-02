@@ -65,7 +65,7 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
   message(sprintf("Fetch 2nd time for left %d addrs...", length(left)))
   if (length(left) > 500 && !use_tor) {
     use_tor <- TRUE
-    message("(Using tor in crawling)")
+    message(sprintf("Using tor for left %d data", length(left)))
   }
   if (n_cpu > 1 && length(left) >= 10) {
     temp <- left %>%
@@ -83,16 +83,24 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
 
   # # Fetch 3rd time (w/o tor)
   # left <- out[is.na(lat), addr]
-  # if (length(left) > 1000) {
+  # if (length(left) > 500) {
   #   use_tor <- TRUE
   #   message(sprintf("Using tor for left %d data", length(left)))
   # } else {
   #   use_tor <- FALSE
   # }
-  # temp <- left %>%
-  #   sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
-  #          simplify = FALSE, USE.NAMES = TRUE) %>%
-  #   rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+  # if (n_cpu > 1 && length(left) >= 10) {
+  #   temp <- left %>%
+  #     pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
+  #                       simplify = FALSE, USE.NAMES = TRUE,
+  #                       cl = cl) %>%
+  #     rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+  # } else {
+  #   temp <- left %>%
+  #     sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
+  #            simplify = FALSE, USE.NAMES = TRUE) %>%
+  #     rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+  # }
   # out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
 
   out
