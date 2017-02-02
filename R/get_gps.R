@@ -30,11 +30,18 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
   message(sprintf("Input %d address; processing %s unique",
                   n_oginial_addr, length(addrs)))
 
-  if (n_cpu == -1L) {
+  if (n_cpu > 1 && length(addrs) >= 10) {
+    is_parallel <- TRUE
+  } else {
+    is_parallel <- FALSE
+  }
+  if (use_tor) message("(Using tor in crawling)");
+
+  if (is_parallel) {
     n_cpu <- parallel::detectCores() - 1
   }
 
-  if (n_cpu > 1 && length(addrs) >= 10) {
+  if (is_parallel) {
     cl <- parallel::makeCluster(n_cpu)
     print(cl)
     on.exit(parallel::stopCluster(cl))
@@ -49,13 +56,12 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
       parallel::clusterCall(cl, worker.init, c('httr', 'rvest', 'data.table'))
     )
 
-    if (use_tor) message("(Using tor in crawling)");
     out <- pbapply::pbsapply(addrs, get_gps_, rate = rate, use_tor = use_tor,
                              simplify = FALSE, USE.NAMES = TRUE,
                              cl = cl) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   } else {
-    out <- sapply(addrs, FUN = get_gps_, rate, use_tor = FALSE,
+    out <- sapply(addrs, FUN = get_gps_, rate, use_tor = use_tor,
                   simplify = FALSE, USE.NAMES = TRUE) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   }
@@ -67,7 +73,7 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
     use_tor <- TRUE
     message(sprintf("Using tor for left %d data", length(left)))
   }
-  if (n_cpu > 1 && length(left) >= 10) {
+  if (is_parallel) {
     temp <- left %>%
       pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
                         simplify = FALSE, USE.NAMES = TRUE,
@@ -89,7 +95,7 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
   # } else {
   #   use_tor <- FALSE
   # }
-  # if (n_cpu > 1 && length(left) >= 10) {
+  # if (is_parallel) {
   #   temp <- left %>%
   #     pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
   #                       simplify = FALSE, USE.NAMES = TRUE,
