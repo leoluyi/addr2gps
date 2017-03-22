@@ -30,10 +30,9 @@ geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor =
   message(sprintf("%d unique address out of %d input",
                   length(addrs), n_oginial_addr))
 
+  if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
   if (n_cpu > 1 && length(addrs) >= 10) {
     is_parallel <- TRUE
-    if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
-
   } else {
     is_parallel <- FALSE
   }
@@ -67,25 +66,28 @@ geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor =
 
   # Fetch 2nd time
   left <- out[is.na(lat), addr]
-  message(sprintf("Fetch 2nd time for left %d addrs...", length(left)))
-  if (length(left) > 500 && !use_tor) {
-    use_tor <- TRUE
-    message(sprintf("Using tor for left %d data", length(left)))
+  if (length(left) > 0) {
+    message(sprintf("Fetch 2nd time for left %d addrs...", length(left)))
+    
+    if (length(left) > 500 && !use_tor) {
+      use_tor <- TRUE
+      message(sprintf("Using tor for left %d data", length(left)))
+    }
+    if (is_parallel) {
+      temp <- left %>%
+        pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
+                          simplify = FALSE, USE.NAMES = TRUE,
+                          cl = cl) %>%
+        rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+    } else {
+      temp <- left %>%
+        sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
+               simplify = FALSE, USE.NAMES = TRUE) %>%
+        rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+    }
+    out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
   }
-  if (is_parallel) {
-    temp <- left %>%
-      pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
-                        simplify = FALSE, USE.NAMES = TRUE,
-                        cl = cl) %>%
-      rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
-  } else {
-    temp <- left %>%
-      sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
-             simplify = FALSE, USE.NAMES = TRUE) %>%
-      rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
-  }
-  out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
-
+  
   # # Fetch 3rd time (w/o tor)
   # left <- out[is.na(lat), addr]
   # if (length(left) > 500) {
@@ -120,29 +122,38 @@ get_gps_ <- function(addr, rate=200, use_tor = FALSE, ...) {
   Sys.sleep(rexp(1, rate)) # sleep expo dist at rate per sec
 
   url <- "http://api.map.com.tw/net/GraphicsXY.aspx"
-  get_ <- function(use_tor) {
-    if (use_tor) {
-      GET(url,
-          use_proxy("socks5://localhost:9050"), # tor proxy
-          add_headers(
-            Referer = "http://www.map.com.tw/",
-            `User-Agent` = "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36"
-          ),
-          query = list(
-            search_class = "address",
-            SearchWord = addr,
-            searchkey = "D43A19151569F32A449B7EDCB8555165B68B5F95"))
-    } else {
-      GET(url,
-          add_headers(
-            Referer = "http://www.map.com.tw/",
-            `User-Agent` = "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36"
-          ),
-          query = list(
-            search_class = "address",
-            SearchWord = addr,
-            searchkey = "D43A19151569F32A449B7EDCB8555165B68B5F95"))
+  get_ <- function(use_tor, max_try = 3) {
+
+    i <- 1
+    while (i <= max_try) {
+      if (use_tor) {
+        set_config(use_proxy("socks5://localhost:9050"))
+        # set_config(verbose())
+      }
+      
+      tryCatch({
+        res <- GET(url,
+                   add_headers(
+                     Referer = "http://www.map.com.tw/",
+                     `User-Agent` = "Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.106 Safari/537.36"
+                   ),
+                   query = list(
+                     search_class = "address",
+                     SearchWord = addr,
+                     searchkey = "D43A19151569F32A449B7EDCB8555165B68B5F95"))
+        break
+      }, error = function(e) {
+        i <<- i + 1
+        if (i == max_try) {
+          stop(e)
+        }
+        res <<- NULL
+      })
+      reset_config()
     }
+
+    reset_config()
+    res
   }
 
   res <- get_(use_tor)
