@@ -9,7 +9,7 @@ library(pbapply)
 #' @param addr Address string
 #' @param rate Connection rate per second
 #'
-#' @describeIn get_gps Get GPS from address vector
+#' @describeIn geocode Get GPS from address vector
 #' @return GPS data.table
 #' @export
 #' @import httr rvest data.table parallel
@@ -17,8 +17,8 @@ library(pbapply)
 #' @examples
 #' addrs <- c("台北市中正區羅斯福路一段２號",
 #'            "台北市中正區貴陽街一段１２０號")
-#' get_gps(addrs)
-get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
+#' geocode(addrs)
+geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor = TRUE) {
   # addrs <- c("台北市中正區羅斯福路一段２號",
   #            "台北市中正區貴陽街一段１２０號")
   if (!is.vector(addrs)) {
@@ -27,19 +27,18 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
 
   n_oginial_addr <- length(addrs)
   addrs <- unique(addrs)
-  message(sprintf("Input %d address; processing %s unique",
-                  n_oginial_addr, length(addrs)))
+  message(sprintf("%d unique address out of %d input",
+                  length(addrs), n_oginial_addr))
 
   if (n_cpu > 1 && length(addrs) >= 10) {
     is_parallel <- TRUE
+    if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
+
   } else {
     is_parallel <- FALSE
   }
   if (use_tor) message("(Using tor in crawling)");
 
-  if (is_parallel) {
-    n_cpu <- parallel::detectCores() - 1
-  }
 
   if (is_parallel) {
     cl <- parallel::makeCluster(n_cpu)
@@ -113,7 +112,7 @@ get_gps <- function(addrs, n_cpu = -1L, rate = 200, use_tor = TRUE) {
 }
 
 
-#' @describeIn get_gps Get GPS from address vector length of one
+#' @describeIn geocode Get GPS from address vector length of one
 get_gps_ <- function(addr, rate=200, use_tor = FALSE, ...) {
   # addr <- "台北市中正區羅斯福路一段２號"
 
