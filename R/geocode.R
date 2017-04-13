@@ -12,7 +12,7 @@ library(pbapply)
 #' @describeIn geocode Get GPS from address vector
 #' @return GPS data.table
 #' @export
-#' @import httr rvest data.table parallel
+#' @import magrittr httr rvest data.table parallel
 #'
 #' @examples
 #' addrs <- c("台北市中正區羅斯福路一段２號",
@@ -51,7 +51,7 @@ geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor =
       invisible(NULL)
     }
     invisible(
-      parallel::clusterCall(cl, worker.init, c('httr', 'rvest', 'data.table'))
+      parallel::clusterCall(cl, worker.init, c('magrittr', 'httr', 'rvest', 'data.table'))
     )
 
     out <- pbapply::pbsapply(addrs, get_gps_, rate = rate, use_tor = use_tor,
@@ -139,7 +139,7 @@ get_gps_ <- function(addr, rate=200, use_tor = FALSE, ...) {
                    ),
                    query = list(
                      search_class = "address",
-                     SearchWord = addr,
+                     SearchWord = addr %>% clean_addr,
                      searchkey = "D43A19151569F32A449B7EDCB8555165B68B5F95"))
         break
       }, error = function(e) {

@@ -16,4 +16,5 @@ Imports:
     httr,
     parallel,
     pbapply,
-    rvest
+    rvest,
+    magrittr

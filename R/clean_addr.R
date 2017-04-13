@@ -14,12 +14,14 @@
 #'
 #' @return Character vector of cleaned addrs
 #'
-#' @import stringr
-#'
+#' @import magrittr stringr
 #'
 #' @examples
+#' 
+#' @export
 clean_addr <- function(addrs) {
-  addrs %<>% str_extract("^[^(（]+")
-  addrs %<>% str_extract("^.*[號]?")
+  addrs <- addrs %>% 
+    str_extract("^[^(（]+") %>% 
+    str_extract("^.*[號]?")
   addrs
 }
