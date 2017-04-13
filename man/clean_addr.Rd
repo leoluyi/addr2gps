@@ -23,3 +23,6 @@ Character vector of cleaned addrs
 地址字串中需排除非地址使用的特殊符號與空白等
 辨識至最小地址單位(如：台北市松山區八德路四段138號3樓球體區，辨識至「號」)
 }
+\examples{
+
+}

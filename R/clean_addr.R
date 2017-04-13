@@ -17,11 +17,12 @@
 #' @import magrittr stringr
 #'
 #' @examples
+#' clean_addr("台北市松山區八德路四段138號3樓球體區")
 #' 
 #' @export
 clean_addr <- function(addrs) {
   addrs <- addrs %>% 
     str_extract("^[^(（]+") %>% 
-    str_extract("^.*?[號]?")
+    str_extract("^.*[號]?")
   addrs
 }
