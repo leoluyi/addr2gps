@@ -7,7 +7,11 @@ library(pbapply)
 #' Get GPS (lon, lat) from address
 #'
 #' @param addr Address string
+#' @param source API source
+#' @param parallel Parallel connection
+#' @param n_cpu 
 #' @param rate Connection rate per second
+#' @param use_tor Boolean. Default TRUE. Use tor or not.
 #'
 #' @describeIn geocode Get GPS from address vector
 #' @return GPS data.table
@@ -15,23 +19,25 @@ library(pbapply)
 #' @import magrittr httr rvest data.table parallel
 #'
 #' @examples
-#' addrs <- c("台北市中正區羅斯福路一段２號",
+#' addr <- c("台北市中正區羅斯福路一段２號",
 #'            "台北市中正區貴陽街一段１２０號")
-#' geocode(addrs)
-geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor = TRUE) {
-  # addrs <- c("台北市中正區羅斯福路一段２號",
+#' geocode(addr)
+geocode <- function(addr, precise = FALSE, source = "google", 
+                    parallel = TRUE, n_cpu = -1L, 
+                    rate = 200, use_tor = TRUE) {
+  # addr <- c("台北市中正區羅斯福路一段２號",
   #            "台北市中正區貴陽街一段１２０號")
-  if (!is.vector(addrs)) {
+  if (!is.vector(addr)) {
     stop("values must be character vecter")
   }
 
-  n_oginial_addr <- length(addrs)
-  addrs <- unique(addrs)
+  n_oginial_addr <- length(addr)
+  addr <- unique(addr)
   message(sprintf("%d unique address out of %d input",
-                  length(addrs), n_oginial_addr))
+                  length(addr), n_oginial_addr))
 
   if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
-  if (n_cpu > 1 && length(addrs) >= 10) {
+  if (n_cpu > 1 && length(addr) >= 10) {
     is_parallel <- TRUE
   } else {
     is_parallel <- FALSE
@@ -54,12 +60,12 @@ geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor =
       parallel::clusterCall(cl, worker.init, c('magrittr', 'httr', 'rvest', 'data.table'))
     )
 
-    out <- pbapply::pbsapply(addrs, get_gps_, rate = rate, use_tor = use_tor,
+    out <- pbapply::pbsapply(addr, geocode_, rate = rate, use_tor = use_tor,
                              simplify = FALSE, USE.NAMES = TRUE,
                              cl = cl) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   } else {
-    out <- sapply(addrs, FUN = get_gps_, rate, use_tor = use_tor,
+    out <- sapply(addr, FUN = geocode_, rate, use_tor = use_tor,
                   simplify = FALSE, USE.NAMES = TRUE) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   }
@@ -67,7 +73,7 @@ geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor =
   # Fetch 2nd time
   left <- out[is.na(lat), addr]
   if (length(left) > 0) {
-    message(sprintf("Fetch 2nd time for left %d addrs...", length(left)))
+    message(sprintf("Fetch 2nd time for left %d addr...", length(left)))
     
     if (length(left) > 500 && !use_tor) {
       use_tor <- TRUE
@@ -75,13 +81,13 @@ geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor =
     }
     if (is_parallel) {
       temp <- left %>%
-        pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
+        pbapply::pbsapply(geocode_, rate = rate, use_tor = use_tor,
                           simplify = FALSE, USE.NAMES = TRUE,
                           cl = cl) %>%
         rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
     } else {
       temp <- left %>%
-        sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
+        sapply(., FUN = geocode_, rate = rate, use_tor = use_tor,
                simplify = FALSE, USE.NAMES = TRUE) %>%
         rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
     }
@@ -98,24 +104,27 @@ geocode <- function(addrs, source = "google", n_cpu = -1L, rate = 200, use_tor =
   # }
   # if (is_parallel) {
   #   temp <- left %>%
-  #     pbapply::pbsapply(get_gps_, rate = rate, use_tor = use_tor,
+  #     pbapply::pbsapply(geocode_, rate = rate, use_tor = use_tor,
   #                       simplify = FALSE, USE.NAMES = TRUE,
   #                       cl = cl) %>%
   #     rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   # } else {
   #   temp <- left %>%
-  #     sapply(., FUN = get_gps_, rate = rate, use_tor = use_tor,
+  #     sapply(., FUN = geocode_, rate = rate, use_tor = use_tor,
   #            simplify = FALSE, USE.NAMES = TRUE) %>%
   #     rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   # }
   # out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
 
-  out
+  if (precise) {
+    to_clean <- setdiff(names(out),  "addr")
+    out[village == "", (to_clean) := NULL]
+  }
+  
+  out[]
 }
 
-
-#' @describeIn geocode Get GPS from address vector length of one
-get_gps_ <- function(addr, rate=200, use_tor = FALSE, ...) {
+geocode_ <- function(addr, rate=200, use_tor = FALSE, ...) {
   # addr <- "台北市中正區羅斯福路一段２號"
 
   ## to be nice :)
@@ -131,7 +140,7 @@ get_gps_ <- function(addr, rate=200, use_tor = FALSE, ...) {
         # set_config(verbose())
       }
       
-      tryCatch({
+      err <- tryCatch({
         res <- GET(url,
                    add_headers(
                      Referer = "http://www.map.com.tw/",
@@ -145,9 +154,14 @@ get_gps_ <- function(addr, rate=200, use_tor = FALSE, ...) {
       }, error = function(e) {
         i <<- i + 1
         if (i == max_try) {
+          if (e$message == "Couldn't connect to server" && use_tor) {
+            warning("TOR connection may be faild. Restart TOR with `sudo killall tor; tor &`", call. = FALSE)
+            stop(e)
+          }
           stop(e)
         }
         res <<- NULL
+        invisible(e)
       })
       reset_config()
     }
