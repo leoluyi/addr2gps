@@ -17,4 +17,5 @@ Imports:
     parallel,
     pbapply,
     rvest,
-    magrittr
+    magrittr,
+    stringr
