@@ -24,5 +24,6 @@ Character vector of cleaned addrs
 辨識至最小地址單位(如：台北市松山區八德路四段138號3樓球體區，辨識至「號」)
 }
 \examples{
+clean_addr("台北市松山區八德路四段138號3樓球體區")
 
 }
