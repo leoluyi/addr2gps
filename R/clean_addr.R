@@ -27,6 +27,7 @@
 clean_addr <- function(addrs) {
   addrs <- addrs %>% 
     str_extract("^[^(（]+") %>% 
-    str_extract("^.*[號]?")
+    str_extract("^.*[號]?") %>% 
+    str_replace("^(\\d|[^\\w])+", "")
   addrs
 }
