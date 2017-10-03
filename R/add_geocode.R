@@ -1,5 +1,3 @@
-#' Add GIS columns to data.frame
-#' 
 #' @param data data.frame contains address variable.
 #' @param addr_var Character. Name of address variable.
 #'

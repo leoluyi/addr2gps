@@ -3,7 +3,7 @@
 \name{add_geocode}
 \alias{add_geocode}
 \alias{geocode}
-\title{Add GIS columns to data.frame}
+\title{Get GPS (lon, lat) from address}
 \usage{
 add_geocode(data, addr_var, precise = FALSE, source = "google",
   parallel = TRUE, n_cpu = -1L, rate = 200, use_tor = TRUE)
@@ -32,8 +32,6 @@ geocode(addr, precise = FALSE, source = "google", parallel = TRUE,
 GPS data.table
 }
 \description{
-Add GIS columns to data.frame
-
 Get GPS (lon, lat) from address
 }
 \section{Functions}{
