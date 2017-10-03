@@ -16,16 +16,18 @@
 #' out
 #' 
 #' @export
-add_geocode <- function(data, addr_var, precise = FALSE, source = "google", parallel = TRUE, n_cpu = -1L, 
+add_geocode <- function(data, addr_var, precise = FALSE, source = "google", 
+                        parallel = TRUE, n_cpu = -1L, 
                         rate = 200, use_tor = TRUE) {
   
   setDT(data)
   
-  addrs <- data[[addr_var]] %>%
+  matched_addrs <- data[[addr_var]] %>%
     geocode(precise = precise, source = source, n_cpu = n_cpu, 
             rate = rate, use_tor = use_tor) %>% 
-    .[, .(addr, lat_y = lat, lon_x = lng)]
-  out <- addrs[data, on = c(addr = addr_var)]
+    .[, .(addr, lat_y = lat, lon_x = lng, addr_norm)]
+  
+  out <- matched_addrs[data, on = c(addr = addr_var)]
   out[]
 }
 
