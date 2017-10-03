@@ -36,16 +36,18 @@ geocode <- function(addr, precise = FALSE, source = "google",
   message(sprintf("%d unique address out of %d input",
                   length(addr), n_oginial_addr))
 
-  if (n_cpu > 1 && length(addr) >= 10) {
+  if (n_cpu != 1 && length(addr) >= 10) {
     is_parallel <- TRUE
   } else {
     is_parallel <- FALSE
   }
   if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
   
-  if (use_tor) message("(Using tor in crawling)");
+  if (use_tor) message("(Use tor in crawling)");
 
   if (is_parallel) {
+    message(sprintf("(Use %s clusters)", n_cpu))
+    
     cl <- parallel::makeCluster(n_cpu)
     print(cl)
     on.exit(parallel::stopCluster(cl))
@@ -77,9 +79,11 @@ geocode <- function(addr, precise = FALSE, source = "google",
     
     if (length(left) > 500 && !use_tor) {
       use_tor <- TRUE
-      message(sprintf("Using tor for left %d data", length(left)))
+      message(sprintf("Use tor for left %d data", length(left)))
     }
     if (is_parallel) {
+      message(sprintf("(Use %s clusters)", n_cpu))
+      
       temp <- left %>%
         pbapply::pbsapply(geocode_, rate = rate, use_tor = use_tor,
                           simplify = FALSE, USE.NAMES = TRUE,
