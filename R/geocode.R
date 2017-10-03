@@ -1,9 +1,3 @@
-library(parallel)
-library(httr)
-library(rvest)
-library(data.table)
-library(pbapply)
-
 #' Get GPS (lon, lat) from address
 #'
 #' @param addr Address string
@@ -16,7 +10,7 @@ library(pbapply)
 #' @describeIn geocode Get GPS from address vector
 #' @return GPS data.table
 #' @export
-#' @import magrittr httr rvest data.table parallel
+#' @import magrittr httr rvest data.table parallel pbapply
 #'
 #' @examples
 #' addr <- c("台北市中正區羅斯福路一段２號",
