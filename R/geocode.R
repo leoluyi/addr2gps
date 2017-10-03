@@ -36,14 +36,14 @@ geocode <- function(addr, precise = FALSE, source = "google",
   message(sprintf("%d unique address out of %d input",
                   length(addr), n_oginial_addr))
 
-  if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
   if (n_cpu > 1 && length(addr) >= 10) {
     is_parallel <- TRUE
   } else {
     is_parallel <- FALSE
   }
+  if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
+  
   if (use_tor) message("(Using tor in crawling)");
-
 
   if (is_parallel) {
     cl <- parallel::makeCluster(n_cpu)
