@@ -6,6 +6,9 @@
 #' @describeIn geocode Add GIS columns to data.frame.
 #' 
 #' @examples 
+#' library(data.table)
+#' library(magrittr)
+#' 
 #' dt <- data.table(addrs = c("台北市中正區羅斯福路一段２號",
 #'                            "台北市中正區貴陽街一段１２０號"),
 #'                  X = c(3, 2))
