@@ -114,6 +114,8 @@ geocode <- function(addr, precise = FALSE, source = "google",
   # }
   # out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
 
+  to_clean <- setdiff(names(out),  c("addr", "msg"))
+  out[msg == "Over limit", (to_clean) := NA]
   if (precise) {
     to_clean <- setdiff(names(out),  "addr")
     out[village == "", (to_clean) := NA]
