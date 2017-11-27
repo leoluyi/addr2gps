@@ -116,7 +116,7 @@ geocode <- function(addr, precise = FALSE, source = "google",
 
   if (precise) {
     to_clean <- setdiff(names(out),  "addr")
-    out[village == "", (to_clean) := NULL]
+    out[village == "", (to_clean) := NA]
   }
   
   out[]
