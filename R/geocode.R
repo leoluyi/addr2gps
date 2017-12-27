@@ -196,5 +196,7 @@ geocode_ <- function(addr, rate=200, use_tor = FALSE, ...) {
     as.data.table
   out[!is.na(lat),
       addr_norm := paste0(baddr2, bname2, village, road)]
+  out[, c("lat", "lng") := lapply(.SD, as.numeric), .SDcols = c("lat", "lng")]
+  
   out
 }
