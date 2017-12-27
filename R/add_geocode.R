@@ -26,6 +26,8 @@ add_geocode <- function(data, addr_var, precise = FALSE, source = "google",
     .[, .(addr, lat_y = lat, lon_x = lng, addr_norm)]
   
   out <- matched_addrs[data, on = c(addr = addr_var)]
+  setnames(out, old = "addr", new = addr_var)
+  
   out[]
 }
 
