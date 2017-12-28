@@ -136,7 +136,10 @@ geocode_ <- function(addr, rate=200, use_tor = FALSE, ...) {
     i <- 1
     while (i <= max_try) {
       if (use_tor) {
-        set_config(use_proxy("socks5://localhost:9050"))
+        old <- set_config(use_proxy("socks5://localhost:9050"))
+        on.exit({
+          set_config(old, override = TRUE)
+        })
         # set_config(verbose())
       }
       
@@ -163,10 +166,8 @@ geocode_ <- function(addr, rate=200, use_tor = FALSE, ...) {
         res <<- NULL
         invisible(e)
       })
-      reset_config()
     }
 
-    reset_config()
     res
   }
 
