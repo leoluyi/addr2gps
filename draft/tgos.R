@@ -26,7 +26,8 @@ get_keystr <- function() {
   keystr
 }
 
-geocode_.tgos <- function(addr, keystr, use_tor = TRUE) {
+geocode_.tgos <- function(addr, keystr, use_tor = TRUE, max_try = 3) {
+  
   if (use_tor) {
     old <- set_config(use_proxy("socks5://localhost:9050"))
     on.exit({
@@ -35,29 +36,39 @@ geocode_.tgos <- function(addr, keystr, use_tor = TRUE) {
     # set_config(verbose())
   }
   
-  res <- GET(url,
-             ua,
-             add_headers(
-               # Host = "gis.tgos.tw",
-               # `Accept-Encoding` = "gzip, deflate, br",
-               # `Accept-Language` = "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6,ja;q=0.5",
-               # Connection = "keep-alive",
-               Referer = "https://map.tgos.tw/TGOSimpleViewer/Web/Map/TGOSimpleViewer_Map.aspx"
-             ),
-             # set_cookies(
-             #    `_ga` = "GA1.2.14420987.1514444967",
-             #    `_gid`= "GA1.2.14420987.1514444967",
-             #    `_gat` = "1"
-             # ),
-             query = 
-               list(
-                 format = "json",
-                 input = addr,
-                 srs = I("EPSG:4326"),
-                 keystr = keystr
-               )
-  )
-  res %>% content(as = "parsed", type = "application/json")
+  i <- 1
+  while (i <= max_try) {
+    tryCatch({
+      res <- GET(url,
+                 ua,
+                 add_headers(
+                   Referer = "https://map.tgos.tw/TGOSimpleViewer/Web/Map/TGOSimpleViewer_Map.aspx"
+                 ),
+                 query = 
+                   list(
+                     format = "json",
+                     input = addr,
+                     srs = I("EPSG:4326"),
+                     keystr = keystr
+                   )
+      )
+      out <- res %>% content(as = "parsed", type = "application/json")
+    }, error = function(e) {
+      i <<- i + 1
+      if (i == max_try) {
+        if (e$message == "Couldn't connect to server" && use_tor) {
+          warning("TOR connection may be faild. Restart TOR with `sudo killall tor; tor &`", call. = FALSE)
+          stop(e)
+        }
+        stop(e)
+      }
+      system("sudo killall tor; tor&")
+      res <<- NULL
+      invisible(e)
+    })
+  }
+ 
+  out
 }
 
 testit <- function(ITER = 200000) {

@@ -131,17 +131,19 @@ geocode_ <- function(addr, rate=200, use_tor = FALSE, ...) {
   Sys.sleep(rexp(1, rate)) # sleep expo dist at rate per sec
 
   url <- "http://api.map.com.tw/net/GraphicsXY.aspx"
+  
   get_ <- function(use_tor, max_try = 3) {
 
+    if (use_tor) {
+      old <- set_config(use_proxy("socks5://localhost:9050"))
+      on.exit({
+        set_config(old, override = TRUE)
+      })
+      # set_config(verbose())
+    }
+    
     i <- 1
     while (i <= max_try) {
-      if (use_tor) {
-        old <- set_config(use_proxy("socks5://localhost:9050"))
-        on.exit({
-          set_config(old, override = TRUE)
-        })
-        # set_config(verbose())
-      }
       
       err <- tryCatch({
         res <- GET(url,
@@ -163,6 +165,7 @@ geocode_ <- function(addr, rate=200, use_tor = FALSE, ...) {
           }
           stop(e)
         }
+        system("sudo killall tor; tor&")
         res <<- NULL
         invisible(e)
       })
