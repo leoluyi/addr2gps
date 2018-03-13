@@ -36,13 +36,14 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
       )
       out <- res %>% content(as = "parsed", type = "application/json")
       
-      if (!is.null(out$error_message) && i <= max_try) {
+      if (out$status == "OK") {
+        break
+      } else if (!is.null(out$error_message) && out$error_message == "Invalid key" && i <= max_try) {
         message("(Invalid key. Renewing the key...)")
         keystr <- get_keystr()
         i <- i + 1
         next
-      }
-      if (out$status == "ZERO_RESULTS" && grepl("號", addr) && !precise && i <= max_try) {
+      } else if (out$status == "ZERO_RESULTS" && grepl("號", addr) && !precise && i <= max_try) {
         old_addr <- addr
         num <- addr %>% stringr::str_match(".*?(\\d+)號[^號]*?$") %>% .[1,2]
         new_num <- as.integer(num) + 1
@@ -50,6 +51,10 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
                                  sprintf("\\1%s\\3", new_num))
         i <- max_try + 1
         message(sprintf("(Modify addr %s => %s)", old_addr, addr))
+        next
+      } else if (i <= max_try) {
+        message(paste("(retry...)", out$error_message))
+        i <- i + 1
         next
       }
       
@@ -69,7 +74,7 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
           lng = NA,
           lat = NA,
           addr_norm = NA,
-          msg = out$status
+          status = out$status
         )
         return(invisible(NULL))
       }
@@ -80,23 +85,23 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
     })
   }
   
-  if (out$status == "ZERO_RESULTS") {
-    out <- data.table(
-      lng = NA,
-      lat = NA,
-      addr_norm = NA,
-      msg = out$status
-    )
-  } else {
-    out <- data.table(
+  if (out$status == "OK") {
+    out_dt <- data.table(
       lng = out$results[[1]]$geometry$x,
       lat = out$results[[1]]$geometry$y,
       addr_norm = out$results[[1]]$FULL_ADDR,
       msg = out$status
     )
+  } else {
+    out_dt <- data.table(
+      lng = NA,
+      lat = NA,
+      addr_norm = NA,
+      msg = out$status
+    )
   }
   
-  out
+  out_dt
 }
 
 
