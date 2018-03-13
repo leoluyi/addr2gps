@@ -66,12 +66,14 @@ geocode <- function(addr, source = c("map.com", "tgos", "mix"),
       parallel::clusterCall(cl, worker.init, c('magrittr', 'httr', 'rvest', 'data.table'))
     )
 
-    out <- pbapply::pbsapply(addr, geocode_, rate = rate, use_tor = use_tor,
+    out <- pbapply::pbsapply(addr, geocode_, precise = precise, 
+                             rate = rate, use_tor = use_tor,
                              simplify = FALSE, USE.NAMES = TRUE,
                              cl = cl) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   } else {
-    out <- pbapply::pbsapply(addr, geocode_, rate, use_tor = use_tor,
+    out <- pbapply::pbsapply(addr, geocode_, precise = precise, 
+                             rate = rate, use_tor = use_tor,
                   simplify = FALSE, USE.NAMES = TRUE) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   }
@@ -89,13 +91,15 @@ geocode <- function(addr, source = c("map.com", "tgos", "mix"),
       message(sprintf("(Use %s clusters)", n_cpu))
       
       temp <- left %>%
-        pbapply::pbsapply(geocode_, rate = rate, use_tor = use_tor,
+        pbapply::pbsapply(geocode_, precise = precise, 
+                          rate = rate, use_tor = use_tor,
                           simplify = FALSE, USE.NAMES = TRUE,
                           cl = cl) %>%
         rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
     } else {
       temp <- left %>%
-        pbapply::pbsapply(., geocode_, rate = rate, use_tor = use_tor,
+        pbapply::pbsapply(., geocode_, precise = precise, 
+                          rate = rate, use_tor = use_tor,
                simplify = FALSE, USE.NAMES = TRUE) %>%
         rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
     }

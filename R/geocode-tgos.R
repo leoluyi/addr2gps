@@ -44,7 +44,7 @@ geocode_tgos_ <- function(addr, keystr, rate = 200, use_tor = TRUE, max_try = 3)
     }, error = function(e) {
       i <<- i + 1
       
-      if (i == max_try) {
+      if (i > max_try) {
         stop(e)
       }
       
