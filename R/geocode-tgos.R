@@ -58,7 +58,14 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
       i <<- i + 1
       
       if (i > max_try) {
-        stop(e)
+        warning(e)
+        out <<- data.table(
+          lng = NA,
+          lat = NA,
+          addr_norm = NA,
+          msg = out$status
+        )
+        return(invisible(NULL))
       }
       
       if (e$message %>% str_detect("Couldn't connect to server|Failed to receive SOCKS5 connect request ack") &&
@@ -69,8 +76,14 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
       
       warning(e)
       warning("(retry...)")
-      res <<- NULL
-      invisible(e)
+      out <<- data.table(
+        lng = NA,
+        lat = NA,
+        addr_norm = NA,
+        msg = out$status
+      )
+      
+      invisible(NULL)
     })
   }
   
@@ -82,7 +95,7 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
       msg = out$status
     )
   } else {
-    out = data.table(
+    out <- data.table(
       lng = out$results[[1]]$geometry$x,
       lat = out$results[[1]]$geometry$y,
       addr_norm = out$results[[1]]$FULL_ADDR,
