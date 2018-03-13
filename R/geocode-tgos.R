@@ -1,5 +1,5 @@
 #' @import magrittr httr rvest stringr data.table
-geocode_tgos_ <- function(addr, keystr, 
+geocode_tgos_ <- function(addr, keystr, precise = FALSE,
                           rate = 200, use_tor = TRUE, max_try = 3,
                           ...) {
   # addr = "臺北市大安區光復南路302"
@@ -41,6 +41,16 @@ geocode_tgos_ <- function(addr, keystr,
         keystr <- get_keystr()
         next
       }
+      if (out$status == "ZERO_RESULTS" && grepl("號", addr) && !precise) {
+        old_addr <- addr
+        num <- addr %>% stringr::str_match(".*?(\\d+)號[^號]*?$") %>% .[1,2]
+        new_num <- as.integer(num) + 1
+        addr <- addr %>% stringr::str_replace("(.*?)(\\d+)(號[^號]*?)$",
+                                 sprintf("\\1%s\\3", new_num))
+        i <- max_try
+        message(sprintf("(Modify addr %s => %s)", old_addr, addr))
+        next
+      }
       
       break
     }, error = function(e) {
@@ -63,12 +73,23 @@ geocode_tgos_ <- function(addr, keystr,
     })
   }
   
-  data.table(
-    lng = out$results[[1]]$geometry$x,
-    lat = out$results[[1]]$geometry$y,
-    addr_norm = out$results[[1]]$FULL_ADDR,
-    msg = out$status
-  )
+  if (out$status == "ZERO_RESULTS") {
+    out <- data.table(
+      lng = NA,
+      lat = NA,
+      addr_norm = NA,
+      msg = out$status
+    )
+  } else {
+    out = data.table(
+      lng = out$results[[1]]$geometry$x,
+      lat = out$results[[1]]$geometry$y,
+      addr_norm = out$results[[1]]$FULL_ADDR,
+      msg = out$status
+    )
+  }
+  
+  out
 }
 
 

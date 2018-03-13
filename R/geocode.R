@@ -32,23 +32,28 @@ geocode <- function(addr, source = c("map.com", "tgos", "mix"),
   message(sprintf("%d unique address out of %d input",
                   length(addr), n_oginial_addr))
 
-  
-  source <- match.arg(source)
-  
-  geocode_ <- switch (source,
-    `map.com` = geocode_map_com_,
-    `tgos` = function(...) geocode_tgos_(keystr = get_keystr(), ...)
-  )
-  
   if (n_cpu != 1 && length(addr) >= 10) {
     is_parallel <- TRUE
   } else {
     is_parallel <- FALSE
   }
   if (n_cpu == -1L) {n_cpu <- parallel::detectCores() - 1}
-  
   if (use_tor) message("(Use tor in crawling)");
 
+  
+  source <- match.arg(source)
+  geocode_ <- switch (
+    source,
+    `map.com` = function(...) {
+      geocode_map_com_(
+        precise = precise, rate = rate, use_tor = use_tor, ...)
+    },
+    `tgos` = function(...) {
+      geocode_tgos_(
+        keystr = get_keystr(), precise = precise, rate = rate, use_tor = use_tor, ...)
+    })
+  
+  
   if (is_parallel) {
     message(sprintf("(Use %s clusters)", n_cpu))
     
@@ -66,15 +71,13 @@ geocode <- function(addr, source = c("map.com", "tgos", "mix"),
       parallel::clusterCall(cl, worker.init, c('magrittr', 'httr', 'rvest', 'data.table'))
     )
 
-    out <- pbapply::pbsapply(addr, geocode_, precise = precise, 
-                             rate = rate, use_tor = use_tor,
+    out <- pbapply::pbsapply(addr, geocode_,
                              simplify = FALSE, USE.NAMES = TRUE,
                              cl = cl) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   } else {
-    out <- pbapply::pbsapply(addr, geocode_, precise = precise, 
-                             rate = rate, use_tor = use_tor,
-                  simplify = FALSE, USE.NAMES = TRUE) %>%
+    out <- pbapply::pbsapply(addr, geocode_,
+                             simplify = FALSE, USE.NAMES = TRUE) %>%
       rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
   }
 
@@ -91,16 +94,14 @@ geocode <- function(addr, source = c("map.com", "tgos", "mix"),
       message(sprintf("(Use %s clusters)", n_cpu))
       
       temp <- left %>%
-        pbapply::pbsapply(geocode_, precise = precise, 
-                          rate = rate, use_tor = use_tor,
+        pbapply::pbsapply(geocode_,
                           simplify = FALSE, USE.NAMES = TRUE,
                           cl = cl) %>%
         rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
     } else {
       temp <- left %>%
-        pbapply::pbsapply(., geocode_, precise = precise, 
-                          rate = rate, use_tor = use_tor,
-               simplify = FALSE, USE.NAMES = TRUE) %>%
+        pbapply::pbsapply(., geocode_, 
+                          simplify = FALSE, USE.NAMES = TRUE) %>%
         rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
     }
     out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
