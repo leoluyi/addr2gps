@@ -9,24 +9,29 @@ add_geocode(data, addr_var, precise = FALSE, source = c("map.com", "tgos",
   "mix"), parallel = TRUE, n_cpu = -1L, rate = 200, use_tor = TRUE)
 
 geocode(addr, source = c("map.com", "tgos", "mix"), precise = FALSE,
-  parallel = TRUE, n_cpu = -1L, rate = 200, use_tor = TRUE)
+  retry = FALSE, parallel = TRUE, n_cpu = -1L, rate = 200,
+  use_tor = TRUE)
 }
 \arguments{
 \item{data}{data.frame contains address variable.}
 
 \item{addr_var}{Character. Name of address variable.}
 
+\item{precise}{Boolean. Default FALSE. For \code{source="map.com"} to use precise results.}
+
 \item{source}{API source: \code{map.com}, \code{tgos}, or \code{mix}}
 
-\item{parallel}{Parallel connection}
+\item{parallel}{Parallel connection.}
 
-\item{n_cpu}{}
+\item{n_cpu}{Use for \code{parallel="TRUE"}. \code{-1} for auto detection the number cores.}
 
-\item{rate}{Connection rate per second}
+\item{rate}{Connection rate per second.}
 
 \item{use_tor}{Boolean. Default TRUE. Use tor or not.}
 
 \item{addr}{Address string}
+
+\item{retry}{Boolean. Default FALSE. TRUE if want to fetch the NA result for second time.}
 }
 \value{
 GPS data.table

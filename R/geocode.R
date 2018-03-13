@@ -2,9 +2,11 @@
 #'
 #' @param addr Address string
 #' @param source API source: \code{map.com}, \code{tgos}, or \code{mix}
-#' @param parallel Parallel connection
-#' @param n_cpu 
-#' @param rate Connection rate per second
+#' @param precise Boolean. Default FALSE. For \code{source="map.com"} to use precise results.
+#' @param retry Boolean. Default FALSE. TRUE if want to fetch the NA result for second time.
+#' @param parallel Parallel connection.
+#' @param n_cpu Use for \code{parallel="TRUE"}. \code{-1} for auto detection the number cores.
+#' @param rate Connection rate per second.
 #' @param use_tor Boolean. Default TRUE. Use tor or not.
 #'
 #' @describeIn geocode Get GPS from address vector
@@ -17,7 +19,7 @@
 #'           "台北市中正區貴陽街一段１２０號")
 #' geocode(addr)
 geocode <- function(addr, source = c("map.com", "tgos", "mix"), 
-                    precise = FALSE, 
+                    precise = FALSE, retry = FALSE,
                     parallel = TRUE, n_cpu = -1L, 
                     rate = 200, use_tor = TRUE) {
   # addr <- c("台北市中正區羅斯福路一段２號",
@@ -82,29 +84,31 @@ geocode <- function(addr, source = c("map.com", "tgos", "mix"),
   }
 
   # Fetch 2nd time
-  left <- out[is.na(lat), addr]
-  if (length(left) > 0) {
-    message(sprintf("Fetch 2nd time for left %d addr...", length(left)))
-    
-    if (length(left) > 500 && !use_tor) {
-      use_tor <- TRUE
-      message(sprintf("Use tor for left %d data", length(left)))
-    }
-    if (is_parallel) {
-      message(sprintf("(Use %s clusters)", n_cpu))
+  if (retry) {
+    left <- out[is.na(lat), addr]
+    if (length(left) > 0) {
+      message(sprintf("Fetch 2nd time for left %d addr...", length(left)))
       
-      temp <- left %>%
-        pbapply::pbsapply(geocode_,
-                          simplify = FALSE, USE.NAMES = TRUE,
-                          cl = cl) %>%
-        rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
-    } else {
-      temp <- left %>%
-        pbapply::pbsapply(., geocode_, 
-                          simplify = FALSE, USE.NAMES = TRUE) %>%
-        rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+      if (length(left) > 500 && !use_tor) {
+        use_tor <- TRUE
+        message(sprintf("Use tor for left %d data", length(left)))
+      }
+      if (is_parallel) {
+        message(sprintf("(Use %s clusters)", n_cpu))
+        
+        temp <- left %>%
+          pbapply::pbsapply(geocode_,
+                            simplify = FALSE, USE.NAMES = TRUE,
+                            cl = cl) %>%
+          rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+      } else {
+        temp <- left %>%
+          pbapply::pbsapply(., geocode_, 
+                            simplify = FALSE, USE.NAMES = TRUE) %>%
+          rbindlist(idcol = "addr", fill=TRUE, use.names = TRUE)
+      }
+      out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
     }
-    out <- rbindlist(list(out[!is.na(lat),], temp), fill=TRUE, use.names = TRUE)
   }
   
   # # Fetch 3rd time (w/o tor)
