@@ -36,18 +36,18 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
       )
       out <- res %>% content(as = "parsed", type = "application/json")
       
-      if (! is.null(out$error_message)) {
+      if (!is.null(out$error_message) && i <= max_try) {
         message("(Invalid key. Renewing the key...)")
         keystr <- get_keystr()
-        next
+        stop("Invalid key")
       }
-      if (out$status == "ZERO_RESULTS" && grepl("號", addr) && !precise) {
+      if (out$status == "ZERO_RESULTS" && grepl("號", addr) && !precise && i <= max_try) {
         old_addr <- addr
         num <- addr %>% stringr::str_match(".*?(\\d+)號[^號]*?$") %>% .[1,2]
         new_num <- as.integer(num) + 1
         addr <- addr %>% stringr::str_replace("(.*?)(\\d+)(號[^號]*?)$",
                                  sprintf("\\1%s\\3", new_num))
-        i <- max_try
+        i <- max_try + 1
         message(sprintf("(Modify addr %s => %s)", old_addr, addr))
         next
       }
