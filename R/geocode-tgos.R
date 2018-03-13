@@ -1,5 +1,7 @@
 #' @import magrittr httr rvest stringr data.table
-geocode_tgos_ <- function(addr, keystr, rate = 200, use_tor = TRUE, max_try = 3) {
+geocode_tgos_ <- function(addr, keystr, 
+                          rate = 200, use_tor = TRUE, max_try = 3,
+                          ...) {
   # addr = "臺北市大安區光復南路302"
   
   ## to be nice :)
