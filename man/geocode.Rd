@@ -5,18 +5,18 @@
 \alias{geocode}
 \title{Get GPS (lon, lat) from address}
 \usage{
-add_geocode(data, addr_var, precise = FALSE, source = "google",
-  parallel = TRUE, n_cpu = -1L, rate = 200, use_tor = TRUE)
+add_geocode(data, addr_var, precise = FALSE, source = c("map.com", "tgos",
+  "mix"), parallel = TRUE, n_cpu = -1L, rate = 200, use_tor = TRUE)
 
-geocode(addr, precise = FALSE, source = "google", parallel = TRUE,
-  n_cpu = -1L, rate = 200, use_tor = TRUE)
+geocode(addr, source = c("map.com", "tgos", "mix"), precise = FALSE,
+  parallel = TRUE, n_cpu = -1L, rate = 200, use_tor = TRUE)
 }
 \arguments{
 \item{data}{data.frame contains address variable.}
 
 \item{addr_var}{Character. Name of address variable.}
 
-\item{source}{API source}
+\item{source}{API source: \code{map.com}, \code{tgos}, or \code{mix}}
 
 \item{parallel}{Parallel connection}
 
@@ -52,6 +52,6 @@ out <- dt \%>\% add_geocode(addr_var = "addrs", use_tor = FALSE)
 out
 
 addr <- c("台北市中正區羅斯福路一段２號",
-           "台北市中正區貴陽街一段１２０號")
+          "台北市中正區貴陽街一段１２０號")
 geocode(addr)
 }
