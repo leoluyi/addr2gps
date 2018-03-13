@@ -56,9 +56,15 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
       break
     }, error = function(e) {
       i <<- i + 1
+      warning(e)
+      
+      if (e$message %>% str_detect("Couldn't connect to server|Failed to receive SOCKS5 connect request ack") &&
+          use_tor) {
+        warning("TOR connection may be faild. Restart TOR with `sudo killall tor; tor &`", call. = FALSE)
+        system("sudo killall tor; tor&")
+      }
       
       if (i > max_try) {
-        warning(e)
         out <<- data.table(
           lng = NA,
           lat = NA,
@@ -68,20 +74,7 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
         return(invisible(NULL))
       }
       
-      if (e$message %>% str_detect("Couldn't connect to server|Failed to receive SOCKS5 connect request ack") &&
-          use_tor) {
-        warning("TOR connection may be faild. Restart TOR with `sudo killall tor; tor &`", call. = FALSE)
-        system("sudo killall tor; tor&")
-      }
-      
-      warning(e)
       warning("(retry...)")
-      out <<- data.table(
-        lng = NA,
-        lat = NA,
-        addr_norm = NA,
-        msg = out$status
-      )
       
       invisible(NULL)
     })
