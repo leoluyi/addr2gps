@@ -39,7 +39,8 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
       if (!is.null(out$error_message) && i <= max_try) {
         message("(Invalid key. Renewing the key...)")
         keystr <- get_keystr()
-        stop("Invalid key")
+        i <- i + 1
+        next
       }
       if (out$status == "ZERO_RESULTS" && grepl("號", addr) && !precise && i <= max_try) {
         old_addr <- addr
