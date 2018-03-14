@@ -49,7 +49,11 @@ geocode_tgos_ <- function(addr, keystr, precise = FALSE,
         new_num <- as.integer(num) + 1
         addr <- addr %>% stringr::str_replace("(.*?)(\\d+)(號[^號]*?)$",
                                  sprintf("\\1%s\\3", new_num))
-        i <- max_try + 1
+        if (i < max_try)  {
+          i <- max_try
+        } else {
+          i <- i + 1
+        }
         message(sprintf("(Modify addr %s => %s)", old_addr, addr))
         next
       } else if (i <= max_try) {
